@@ -64,6 +64,7 @@ class _CustomTextfieldState extends State<CustomTextfield> {
       maxLines: widget.isPassword
           ? 1
           : widget.maxLines, // Fix: set maxLines to 1 if password field
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         prefixText: widget.prefixText,
         prefixIcon: widget.prefixIcon,
@@ -75,11 +76,36 @@ class _CustomTextfieldState extends State<CustomTextfield> {
         }),
         labelText: widget.labelText,
         hintText: widget.hintText,
-        border: const OutlineInputBorder(),
+        labelStyle: WidgetStateTextStyle.resolveWith((states) {
+          if (states.contains(WidgetState.focused)) {
+            return const TextStyle(color: Colors.cyanAccent);
+          }
+          return const TextStyle(color: Colors.white);
+        }),
+        enabledBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.white, width: 1.0),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.cyanAccent, width: 2.0),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+        errorBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.redAccent, width: 1.5),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+        focusedErrorBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.redAccent, width: 2.0),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         suffixIcon: widget.isPassword
             ? IconButton(
-                icon:
-                    Icon(_isObscured ? Icons.visibility_off : Icons.visibility),
+                icon: Icon(
+                  _isObscured ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.white,
+                ),
                 onPressed: () {
                   setState(() {
                     _isObscured = !_isObscured;
@@ -87,20 +113,6 @@ class _CustomTextfieldState extends State<CustomTextfield> {
                 },
               )
             : null,
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.cyanAccent, width: 2.0),
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-        ),
-        enabledBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.white, width: 1.0),
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-        ),
-        labelStyle: WidgetStateTextStyle.resolveWith((states) {
-          if (states.contains(WidgetState.focused)) {
-            return const TextStyle(color: Colors.cyanAccent);
-          }
-          return const TextStyle(color: Colors.white);
-        }),
       ),
     );
   }

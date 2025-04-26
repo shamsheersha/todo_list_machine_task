@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_list_machinetask/view_models/auth_view_model.dart';
-import 'package:todo_list_machinetask/views/login_screen.dart';
+import 'package:todo_list_machinetask/view_models/task_view_model.dart';
 import 'package:todo_list_machinetask/views/splash_screen.dart';
 
 void main() async {
@@ -12,13 +12,14 @@ void main() async {
   if (kIsWeb) {
     // Enable web support for Firebase
     await Firebase.initializeApp(
-        options: FirebaseOptions(
-            apiKey: "AIzaSyAoBw0P-TMd8pZoGlP2X1f1fIPRH_weBZc",
-            authDomain: "to-do-list-fb266.firebaseapp.com",
-            projectId: "to-do-list-fb266",
-            storageBucket: "to-do-list-fb266.firebasestorage.app",
-            messagingSenderId: "21318534662",
-            appId: "1:21318534662:web:b3f3d88c95453972aee587"));
+      options: FirebaseOptions(
+          apiKey: "AIzaSyAoBw0P-TMd8pZoGlP2X1f1fIPRH_weBZc",
+          authDomain: "to-do-list-fb266.firebaseapp.com",
+          projectId: "to-do-list-fb266",
+          storageBucket: "to-do-list-fb266.firebasestorage.app",
+          messagingSenderId: "21318534662",
+          appId: "1:21318534662:web:b3f3d88c95453972aee587"),
+    );
   } else {
     // Enable mobile support for Firebase
     await Firebase.initializeApp();
@@ -34,9 +35,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (context) => AuthViewModel(),
-        ),
+        ChangeNotifierProvider(create: (context) => AuthViewModel()),
+        ChangeNotifierProvider(create: (context) => TaskViewModel()),
       ],
       child: MaterialApp(
         title: 'Todo App',
@@ -45,13 +45,12 @@ class MyApp extends StatelessWidget {
             seedColor: Colors.white,
             brightness: Brightness.dark, // Force dark-based color scheme
           ),
-          
           useMaterial3: true,
           fontFamily: 'Poppins',
           scaffoldBackgroundColor: Colors.black,
           appBarTheme: AppBarTheme(
-            backgroundColor: Colors.black,
-            foregroundColor: Colors.white,
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
