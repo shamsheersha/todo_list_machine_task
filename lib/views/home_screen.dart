@@ -32,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     super.initState();
   }
+
   @override
   void dispose() {
     _taskController.dispose();
@@ -43,7 +44,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final taskViewModel = Provider.of<TaskViewModel>(context);
     final authViewModel = Provider.of<AuthViewModel>(context);
-    
+    if (authViewModel.user == null) {
+      return Scaffold(
+        appBar: CustomAppBar(),
+        body: Center(child: CircularProgressIndicator()), // or a login button
+      );
+    }
     return Scaffold(
       appBar: CustomAppBar(),
       body: ResponsiveLayout(
@@ -86,10 +92,10 @@ class _HomeScreenState extends State<HomeScreen> {
         return TaskItem(
           task: task,
           onToggle: () => taskViewModel.toggleTaskCompletion(task),
-          onTap: ()=> CustomSmoothNavigator.push(context, 
+          onTap: () => CustomSmoothNavigator.push(
+            context,
             TaskDetailScreen(task: task),
           ),
-          
           onDelete: () => taskViewModel.deleteTask(task.id),
         );
       },
@@ -119,13 +125,15 @@ class _HomeScreenState extends State<HomeScreen> {
               border: OutlineInputBorder(),
             ),
           ),
-          SizedBox(height: 15,),
+          SizedBox(
+            height: 15,
+          ),
           CustomTextfield(
             controller: _taskDescriptionController,
             autoFocus: false,
             isPassword: false,
             hintText: 'Task Description',
-            labelText: 'Task Description', 
+            labelText: 'Task Description',
             decoration: const InputDecoration(
               hintText: 'Enter task description',
               border: OutlineInputBorder(),
@@ -215,7 +223,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Welcome, ${authViewModel.user!.displayName}',
+                      'Welcome, ${authViewModel.user?.displayName ?? 'User'}',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 8),

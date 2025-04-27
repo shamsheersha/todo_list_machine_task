@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import 'package:share_plus/share_plus.dart';
 import 'package:todo_list_machinetask/model/task.dart';
 import 'package:todo_list_machinetask/view_models/auth_view_model.dart';
 import 'package:todo_list_machinetask/view_models/task_view_model.dart';
+import 'package:todo_list_machinetask/widgets/custom_text_field.dart';
 import 'package:todo_list_machinetask/widgets/responsive_layout.dart';
 import 'package:todo_list_machinetask/widgets/show_custom_snackbar.dart';
 
@@ -24,17 +24,21 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   bool _isEditing = false;
   bool _isOwner = false;
   bool _showShareForm = false;
+  
+  // Track the current state of the task
+  late Task _currentTask;
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.task.title);
-    _descriptionController = TextEditingController(text: widget.task.description);
+    _currentTask = widget.task; // Initialize with the passed task
+    _titleController = TextEditingController(text: _currentTask.title);
+    _descriptionController = TextEditingController(text: _currentTask.description);
     _shareEmailController = TextEditingController();
-    
+
     // Check if the current user is the owner of this task
     final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
-    _isOwner = widget.task.userId == authViewModel.user!.id;
+    _isOwner = _currentTask.userId == authViewModel.user!.id;
   }
 
   @override
@@ -49,27 +53,43 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     if (_titleController.text.trim().isEmpty) return;
 
     final taskViewModel = Provider.of<TaskViewModel>(context, listen: false);
-    final updatedTask = widget.task.copyWith(
+    final updatedTask = _currentTask.copyWith(
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim(),
     );
+
+    setState(() {
+      _currentTask = updatedTask;
+      _isEditing = false;
+    });
     
     taskViewModel.updateTask(updatedTask);
-    setState(() => _isEditing = false);
     showCustomSnackbar(context, 'Task updated successfully!');
+  }
+
+  void _toggleTaskCompletion() {
+    final taskViewModel = Provider.of<TaskViewModel>(context, listen: false);
+    
+    // Update local state immediately
+    final updatedTask = _currentTask.copyWith(isCompleted: !_currentTask.isCompleted);
+    
+    setState(() {
+      _currentTask = updatedTask;
+    });
+    
+    // Then update in Firebase
+    taskViewModel.updateTask(updatedTask);
   }
 
   void _shareTask() {
     final email = _shareEmailController.text.trim();
     if (email.isEmpty) return;
-    
+
     final taskViewModel = Provider.of<TaskViewModel>(context, listen: false);
-    taskViewModel.shareTask(widget.task.id, email);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Task shared with $email')),
-    );
-    
+    taskViewModel.shareTask(_currentTask.id, email);
+
+    showCustomSnackbar(context, 'Task shared with $email');
+
     setState(() {
       _showShareForm = false;
       _shareEmailController.clear();
@@ -77,13 +97,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   void _shareTaskLink() {
-  SharePlus.instance.share(
-    ShareParams(
-      text: 'Task: ${widget.task.title}\n\n${widget.task.description}',
-      subject: 'Check out this task',
-    ),
-  );
-}
+    SharePlus.instance.share(
+      ShareParams(
+        text: 'Task: ${_currentTask.title}\n\n${_currentTask.description}',
+        subject: 'Check out this task',
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,10 +128,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         tabletLayout: _buildTabletLayout(),
         desktopLayout: _buildDesktopLayout(),
       ),
-      floatingActionButton: _isOwner && !_isEditing ? FloatingActionButton(
-        onPressed: () => setState(() => _showShareForm = !_showShareForm),
-        child: Icon(_showShareForm ? Icons.close : Icons.share),
-      ) : null,
+      floatingActionButton: _isOwner && !_isEditing
+          ? FloatingActionButton(
+              onPressed: () => setState(() => _showShareForm = !_showShareForm),
+              child: Icon(_showShareForm ? Icons.close : Icons.share),
+            )
+          : null,
     );
   }
 
@@ -127,26 +149,24 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               children: [
                 Expanded(
                   child: _isEditing
-                      ? TextField(
+                      ? CustomTextfield(
+                          hintText: 'Enter task title',
+                          labelText: 'Title',
+                          isPassword: false,
                           controller: _titleController,
-                          decoration: const InputDecoration(
-                            labelText: 'Title',
-                            border: OutlineInputBorder(),
-                          ),
                         )
                       : Text(
-                          widget.task.title,
+                          _currentTask.title,
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                 ),
                 if (!_isEditing)
                   Checkbox(
-                    value: widget.task.isCompleted,
+                    value: _currentTask.isCompleted,
                     onChanged: _isOwner
                         ? (value) {
                             if (value != null) {
-                              final taskViewModel = Provider.of<TaskViewModel>(context, listen: false);
-                              taskViewModel.toggleTaskCompletion(widget.task);
+                              _toggleTaskCompletion();
                             }
                           }
                         : null,
@@ -155,12 +175,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
             const SizedBox(height: 16),
             _isEditing
-                ? TextField(
+                ? CustomTextfield(
+                    hintText: 'Enter task description',
+                    labelText: 'Description',
+                    isPassword: false,
                     controller: _descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Description',
-                      border: OutlineInputBorder(),
-                    ),
                     maxLines: 5,
                   )
                 : Column(
@@ -168,14 +187,15 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     children: [
                       Text(
                         'Description',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        widget.task.description.isNotEmpty
-                            ? widget.task.description
+                        _currentTask.description.isNotEmpty
+                            ? _currentTask.description
                             : 'No description provided',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
@@ -195,14 +215,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           ),
                     ),
                     Text(
-                      '${widget.task.createdAt.day}/${widget.task.createdAt.month}/${widget.task.createdAt.year}',
+                      '${_currentTask.createdAt.day}/${_currentTask.createdAt.month}/${_currentTask.createdAt.year}',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),
                 TextButton.icon(
                   onPressed: _shareTaskLink,
-                  icon:  Icon(Icons.adaptive.share),
+                  icon: Icon(Icons.adaptive.share),
                   label: const Text('Share Link'),
                 ),
               ],
@@ -270,7 +290,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            if (widget.task.sharedWith.isEmpty)
+            if (_currentTask.sharedWith.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8.0),
                 child: Text('This task has no collaborators yet'),
@@ -279,13 +299,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: widget.task.sharedWith.length,
+                itemCount: _currentTask.sharedWith.length,
                 itemBuilder: (context, index) {
                   return ListTile(
                     leading: const CircleAvatar(
                       child: Icon(Icons.person),
                     ),
-                    title: Text(widget.task.sharedWith[index]),
+                    title: Text(_currentTask.sharedWith[index]),
                   );
                 },
               ),

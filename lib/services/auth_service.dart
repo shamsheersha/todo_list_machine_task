@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:todo_list_machinetask/model/user.dart';
 
@@ -31,17 +32,29 @@ class AuthService {
   }
 
 // Sign Up 
-  Future<User?> signUp(String email, String password)async{
-    try {
-      final _firebaseUser = await _firebaseAuth.createUserWithEmailAndPassword(email: email, password: password);
-      final firebaseUser = _firebaseUser.user;
-      if(firebaseUser == null)return null;
+  // Add this to your AuthService after successful signup
+Future<User?> signUp(String email, String password) async {
+  try {
+    final _firebaseUser = await _firebaseAuth.createUserWithEmailAndPassword(
+        email: email, password: password);
+    final firebaseUser = _firebaseUser.user;
+    if (firebaseUser == null) return null;
 
-      return User(id: firebaseUser.uid, email: firebaseUser.email!, displayName: firebaseUser.displayName ?? firebaseUser.email!.split('@')[0]);
-    }catch(e){
-       rethrow;
-    }
+    // Create a user document in Firestore
+    await FirebaseFirestore.instance.collection('users').doc(firebaseUser.uid).set({
+      'id': firebaseUser.uid,
+      'email': email,
+      'displayName': email.split('@')[0],
+    });
+
+    return User(
+        id: firebaseUser.uid, 
+        email: firebaseUser.email!, 
+        displayName: firebaseUser.displayName ?? firebaseUser.email!.split('@')[0]);
+  } catch (e) {
+    rethrow;
   }
+}
 
 // Sign Out
   Future<void> signOut() async {

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:todo_list_machinetask/view_models/auth_view_model.dart';
 import 'package:todo_list_machinetask/views/home_screen.dart';
 import 'package:todo_list_machinetask/views/login_screen.dart';
+import 'package:todo_list_machinetask/widgets/custom_smooth_navigator.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -51,13 +52,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
     
     if (authViewModel.isLoggedIn) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+      CustomSmoothNavigator.pushReplacement(context, HomeScreen());
+      
     } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      CustomSmoothNavigator.pushReplacement(context, LoginScreen());
     }
   }
 

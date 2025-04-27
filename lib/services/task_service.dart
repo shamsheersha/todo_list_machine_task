@@ -1,24 +1,35 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:todo_list_machinetask/model/task.dart';
 
 class TaskService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Stream<List<Task>> getTasks(String userId) {
-    return _firestore
-        .collection('tasks')
-        .where(Filter.or(Filter('userId', isEqualTo: userId),
-            Filter('sharedWith', arrayContains: userId)))
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id; // Add the document ID to the data
-        return Task.fromJson(data);
-      }).toList();
-    });
+  final userEmail = FirebaseAuth.instance.currentUser?.email;  
+  if (userEmail == null) {
+    return Stream.value([]);
   }
-
+  
+  return _firestore
+      .collection('tasks')
+      .where(Filter.or(
+        Filter('userId', isEqualTo: userId),
+        Filter('sharedWith', arrayContains: userEmail)
+      ))
+      .snapshots()
+      .map((snapshot) {
+        return snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          if (data['sharedWith'] != null) {
+          }
+          return Task.fromJson(data);
+        }).toList();
+      });
+}
 // Add a new task to the database
   Future<Task> addTask(Task task) async {
     final docRef = await _firestore.collection('tasks').add(task.toJson());
@@ -37,21 +48,26 @@ class TaskService {
 
 // Share a task with another user
   Future<void> shareTask(String taskId, String userEmail) async {
-    final userQuery = await _firestore
-        .collection('users')
-        .where('email', isEqualTo: userEmail)
-        .limit(1)
-        .get();
+    try {
+      final userQuery = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: userEmail)
+          .limit(1)
+          .get();
 
-    if (userQuery.docs.isEmpty) {
-      throw Exception('User not found');
+      if (userQuery.docs.isEmpty) {
+
+        await _firestore.collection('users').add({
+          'email': userEmail,
+          'displayName': userEmail.split('@')[0],
+        });
+      }
+
+      await _firestore.collection('tasks').doc(taskId).update({
+        'sharedWith': FieldValue.arrayUnion([userEmail])
+      });
+    } catch (e) {
+      throw Exception('Failed to share task: $e');
     }
-
-    final userId = userQuery.docs.first.id;
-
-    // Then, Update the task's sharedWith field
-    await _firestore.collection('tasks').doc(taskId).update({
-      'sharedWith': FieldValue.arrayUnion([userId])
-    });
   }
 }
