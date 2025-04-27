@@ -91,6 +91,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     showCustomSnackbar(context, 'Task shared with $email');
 
     setState(() {
+      List<String> updatedSharedWith = [..._currentTask.sharedWith, email];
+      _currentTask = _currentTask.copyWith(sharedWith: updatedSharedWith);
+      
       _showShareForm = false;
       _shareEmailController.clear();
     });
